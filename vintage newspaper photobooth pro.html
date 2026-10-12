@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photobooth Koran Vintage</title>
+    <!-- Font klasik -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Old+Standard+TT:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        body {
+            background-color: #2c2c2c;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            margin: 0;
+            padding: 20px;
+            gap: 20px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        /* Panel Kontrol */
+        .controls {
+            width: 320px;
+            background: #3d3d3d;
+            padding: 20px;
+            border-radius: 8px;
+            position: sticky;
+            top: 20px;
+            box-sizing: border-box;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .controls select, .controls button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 5px;
+            border: none;
+            font-size: 15px;
+            cursor: pointer;
+            transition: 0.2s;
+            box-sizing: border-box;
+        }
+
+        .controls label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #ccc;
+        }
+
+        .controls button.capture { background: #4CAF50; color: white; font-weight: bold;}
+        .controls button.retake { background: #f39c12; color: white; font-weight: bold;}
+        .controls button.print { background: #008CBA; color: white; font-weight: bold;}
+        .controls button:disabled { background: #555; color: #888; cursor: not-allowed; }
+        .controls button:hover:not(:disabled) { opacity: 0.9; transform: translateY(-2px); }
+
+        /* Container untuk Auto-Scale di Mobile */
+        .export-container {
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: center;
+            transform-origin: top center;
+        }
+
+        /* Area Export Koran (Ukurannya dikunci 800px agar render stabil) */
+        #newspaper-export {
+            width: 800px;
+            min-width: 800px; /* Paksa ukurannya tetap */
+            background-color: #f4efd3;
+            padding: 40px;
+            box-sizing: border-box;
+            color: #1a1a1a;
+            font-family: 'Old Standard TT', 'Times New Roman', serif;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+            transform-origin: top left;
+        }
+
+        .header-section {
+            text-align: center;
+            border-bottom: 2px solid #1a1a1a;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+        }
+
+        .tagline {
+            font-size: 14px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .newspaper-title {
+            font-family: 'Playfair Display', 'Times New Roman', serif;
+            font-size: 64px;
+            font-weight: 700;
+            margin: 0;
+            line-height: 70px;
+            text-transform: uppercase;
+        }
+
+        .meta-info {
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px solid #1a1a1a;
+            border-bottom: 1px solid #1a1a1a;
+            padding: 5px 0;
+            margin-top: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        #dynamic-headline {
+            text-align: center;
+            font-size: 38px;
+            font-weight: bold;
+            margin: 20px 0;
+            line-height: 45px;
+            font-family: 'Playfair Display', serif;
+            text-transform: uppercase;
+        }
+
+        /* Layout Grid Dinamis */
+        .photo-grid {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 20px;
+            border: 4px solid #1a1a1a;
+            padding: 10px;
+            background: #fff;
+        }
+        
+        .photo-grid canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+            background: #2a2a2a;
+            object-fit: cover;
+            border: 2px solid #1a1a1a;
+            box-sizing: border-box;
+        }
+
+        .layout-1 { grid-template-columns: 1fr; }
+        .layout-2 { grid-template-columns: 1fr 1fr; }
+        .layout-4 { grid-template-columns: 1fr 1fr; }
+
+        /* Konten Berita */
+        .news-content {
+            display: flex;
+            gap: 20px;
+            text-align: justify;
+            font-size: 15px;
+            line-height: 24px;
+        }
+
+        .news-col { flex: 1; }
+
+        .dropcap {
+            float: left;
+            font-size: 60px;
+            line-height: 50px;
+            padding-top: 6px;
+            padding-right: 8px;
+            font-family: 'Playfair Display', serif;
+            font-weight: bold;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 11px;
+            font-style: italic;
+            border-top: 1px solid #1a1a1a;
+            padding-top: 10px;
+        }
+
+        #webcam { display: none; }
+
+        /* RESPONSIVE UNTUK HP */
+        @media (max-width: 900px) {
+            body {
+                flex-direction: column;
+                align-items: center;
+                padding: 10px;
+            }
+            .controls {
+                width: 100%;
+                max-width: 100%;
+                position: relative; /* Menghilangkan efek sticky */
+                top: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="controls">
+        <h3>Panel Editor</h3>
+        
+        <label>Pilih Template & Layout:</label>
+        <select id="template-selector">
+            <option value="1">1 Foto (Berita Utama)</option>
+            <option value="2">2 Foto (Kisah Kolonial)</option>
+            <option value="4">4 Foto (Album Keluarga)</option>
+        </select>
+
+        <label>Pilih Filter Foto:</label>
+        <select id="filter-selector">
+            <option value="vintage">Vintage (Klasik Sepia)</option>
+            <option value="normal">Normal (Berwarna)</option>
+        </select>
+
+        <video id="webcam" autoplay playsinline></video>
+        
+        <button class="capture" id="btn-capture">Ambil Foto 📸</button>
+        <button class="retake" id="btn-retake" disabled>Ulangi Foto Terakhir 🔄</button>
+        <button class="print" id="btn-print" disabled>Cetak Koran (Download) 🖨️</button>
+    </div>
+
+    <!-- Wrapper untuk fitur auto-scale -->
+    <div class="export-container" id="export-container">
+        <div id="newspaper-export">
+            <div class="header-section">
+                <div class="tagline">Koran No. 1 Di Hindia Belanda</div>
+                <h1 class="newspaper-title">The Vintage Times</h1>
+                <div class="meta-info">
+                    <span>Vol. I. No. 42</span>
+                    <span id="current-date">SOERABAJA, MINGGU, 1 JANUARI 1920</span>
+                    <span>Harga 5 Sen</span>
+                </div>
+            </div>
+
+            <div id="dynamic-headline">
+                TOENDJOENGAN TEMPOE DOELOE
+            </div>
+
+            <div class="photo-grid layout-1" id="photo-container">
+                <!-- Canvas di-generate otomatis oleh JS -->
+            </div>
+
+            <div class="news-content">
+                <div class="news-col" id="col-1">
+                    <span class="dropcap" id="dropcap-letter">S</span>
+                    <span id="text-1">ejarah panjang terukir di jalanan Tunjungan. Kehadirannya mencerminkan pilar modernisasi kota sebagai pusat perbelanjaan kaum elit pada masa kolonial. Gedung megah bergaya Eropa menjadi saksi bisu.</span>
+                </div>
+                <div class="news-col" id="text-2">
+                    Kehidupan malam dan gemerlap lampu seakan tak pernah meninggalkan jalanan ini. Kereta kuda dan trem uap pernah melintas, mengangkut para meneer dan nyonya menyusuri pertokoan eksklusif masa lampau.
+                </div>
+                <div class="news-col" id="text-3">
+                    Hingga hari ini, semangat itu tidak pernah pudar. Masyarakat terus mengingat kenangan masa lalu sebagai warisan identitas kota yang membanggakan. Berbagai upaya pelestarian dilakukan agar sejarah tetap hidup.
+                </div>
+            </div>
+
+            <div class="footer">
+                Dicetak oleh The Vintage Times Press - Dilarang mereproduksi tanpa izin.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('webcam');
+        const btnCapture = document.getElementById('btn-capture');
+        const btnRetake = document.getElementById('btn-retake');
+        const btnPrint = document.getElementById('btn-print');
+        const templateSelector = document.getElementById('template-selector');
+        const filterSelector = document.getElementById('filter-selector');
+        const photoContainer = document.getElementById('photo-container');
+        const newspaperExport = document.getElementById('newspaper-export');
+        const exportContainer = document.getElementById('export-container');
+        
+        let currentPhotos = 0;
+        let maxPhotos = 1;
+        let isCameraReady = false;
+
+        const templateData = {
+            1: { headline: "TOENDJOENGAN TEMPOE DOELOE", dropcap: "S", text1: "ejarah panjang terukir di jalanan Tunjungan. Kehadirannya mencerminkan pilar modernisasi kota sebagai pusat perbelanjaan kaum elit pada masa kolonial. Gedung megah bergaya Eropa menjadi saksi bisu.", text2: "Kehidupan malam dan gemerlap lampu seakan tak pernah meninggalkan jalanan ini. Kereta kuda dan trem uap pernah melintas, mengangkut para meneer dan nyonya menyusuri pertokoan eksklusif masa lampau.", text3: "Hingga hari ini, semangat itu tidak pernah pudar. Masyarakat terus mengingat kenangan masa lalu sebagai warisan identitas kota yang membanggakan. Berbagai upaya pelestarian dilakukan agar sejarah tetap hidup." },
+            2: { headline: "POTRET DUA SEJOLI DI KOTA PAHLAWAN", dropcap: "K", text1: "isah romansa masa lalu tergambar jelas dalam potret hitam putih ini. Di sudut kota Soerabaja, di bawah pendar lampu jalanan kuno, dua insan mengabadikan momen kebersamaan mereka yang tak lekang oleh waktu.", text2: "Trem uap yang melintas menjadi saksi bisu perbincangan hangat di sore itu. Pakaian perlente dan gaun anggun mencerminkan percampuran budaya lokal dan gaya Eropa yang sangat kental di era 1920-an.", text3: "Meski zaman terus bergerak maju dan teknologi kian pesat, gaya klasik ini selalu membawa nostalgia. Sebuah pengingat bahwa keindahan sejati seringkali ditemukan dalam kesederhanaan masa lampau yang syahdu." },
+            4: { headline: "ALBUM KENANGAN: 4 BINGKAI SEJARAH", dropcap: "E", text1: "mpat bingkai kenangan tersusun rapi menyajikan narasi visual yang kuat. Setiap sudut pandang menceritakan emosi dan nuansa yang berbeda, merangkai kepingan momen menjadi satu cerita utuh yang berharga.", text2: "Harmoni dalam perbedaan ekspresi terlihat jelas. Teknik fotografi tempo doeloe dengan keterbatasan warnanya justru berhasil menonjolkan kedalaman karakter dan ketajaman sorot mata dari setiap sosok di dalamnya.", text3: "Sebuah mahakarya cetak yang patut disimpan. Mewariskan visual ini ke generasi mendatang adalah cara terbaik menjaga memori agar tidak tergerus oleh laju digitalisasi. Klasik, elegan, dan penuh dengan makna tersirat." }
+        };
+
+        const setDate = () => {
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const today = new Date().toLocaleDateString('id-ID', dateOptions).toUpperCase();
+            document.getElementById('current-date').textContent = `SOERABAJA, ${today}`;
+        };
+        setDate();
+
+        // Fitur Responsive Scale
+        function adjustScale() {
+            const containerWidth = exportContainer.clientWidth;
+            if (containerWidth < 800) {
+                const scale = containerWidth / 800;
+                newspaperExport.style.transform = `scale(${scale})`;
+                // Sesuaikan tinggi container agar tidak bolong/terpotong di bawahnya
+                exportContainer.style.height = `${newspaperExport.offsetHeight * scale}px`;
+            } else {
+                newspaperExport.style.transform = `scale(1)`;
+                exportContainer.style.height = `auto`;
+            }
+        }
+        window.addEventListener('resize', adjustScale);
+
+        // Akses Kamera (facingMode user untuk HP)
+        navigator.mediaDevices.getUserMedia({ video: { width: {ideal: 640}, height: {ideal: 480}, facingMode: "user" } })
+            .then(stream => {
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    isCameraReady = true;
+                    initTemplate(); 
+                    renderLivePreview(); 
+                };
+            })
+            .catch(err => {
+                alert("Gagal mengakses kamera. Pastikan browser diizinkan.");
+            });
+
+        function initTemplate() {
+            maxPhotos = parseInt(templateSelector.value);
+            currentPhotos = 0;
+            
+            const data = templateData[maxPhotos];
+            document.getElementById('dynamic-headline').textContent = data.headline;
+            document.getElementById('dropcap-letter').textContent = data.dropcap;
+            document.getElementById('text-1').textContent = data.text1;
+            document.getElementById('text-2').textContent = data.text2;
+            document.getElementById('text-3').textContent = data.text3;
+
+            photoContainer.innerHTML = '';
+            photoContainer.className = `photo-grid layout-${maxPhotos}`;
+            for(let i = 0; i < maxPhotos; i++) {
+                let cvs = document.createElement('canvas');
+                cvs.width = 640;
+                cvs.height = 480;
+                photoContainer.appendChild(cvs);
+            }
+            
+            updateUI();
+            
+            // Re-kalkulasi scale jika teks/layout berubah
+            setTimeout(adjustScale, 100);
+        }
+
+        templateSelector.addEventListener('change', initTemplate);
+
+        function renderLivePreview() {
+            if (isCameraReady && currentPhotos < maxPhotos) {
+                const canvases = photoContainer.querySelectorAll('canvas');
+                const targetCanvas = canvases[currentPhotos];
+                
+                if(targetCanvas) {
+                    const ctx = targetCanvas.getContext('2d');
+                    ctx.save();
+                    
+                    if (filterSelector.value === 'vintage') {
+                        ctx.filter = 'grayscale(100%) sepia(40%) contrast(120%) brightness(90%)';
+                    } else {
+                        ctx.filter = 'saturate(110%) contrast(105%)';
+                    }
+                    
+                    ctx.translate(targetCanvas.width, 0);
+                    ctx.scale(-1, 1);
+                    
+                    // Logika Center Crop (Anti gepeng untuk kamera HP)
+                    const vRatio = video.videoWidth / video.videoHeight;
+                    const cRatio = targetCanvas.width / targetCanvas.height;
+                    let drawWidth, drawHeight, startX, startY;
+
+                    if (vRatio > cRatio) {
+                        drawHeight = targetCanvas.height;
+                        drawWidth = video.videoWidth * (targetCanvas.height / video.videoHeight);
+                        startX = (targetCanvas.width - drawWidth) / 2;
+                        startY = 0;
+                    } else {
+                        drawWidth = targetCanvas.width;
+                        drawHeight = video.videoHeight * (targetCanvas.width / video.videoWidth);
+                        startX = 0;
+                        startY = (targetCanvas.height - drawHeight) / 2;
+                    }
+                    
+                    ctx.drawImage(video, startX, startY, drawWidth, drawHeight);
+                    ctx.restore();
+                }
+            }
+            requestAnimationFrame(renderLivePreview);
+        }
+
+        // Action Buttons
+        btnCapture.addEventListener('click', () => {
+            if (currentPhotos < maxPhotos) {
+                currentPhotos++;
+                updateUI();
+            }
+        });
+
+        // Fitur Ulangi Foto
+        btnRetake.addEventListener('click', () => {
+            if (currentPhotos > 0) {
+                currentPhotos--; 
+                // Render live preview otomatis akan menimpa ulang canvas ini
+                updateUI();
+            }
+        });
+
+        function updateUI() {
+            // Update Capture Button
+            if (currentPhotos >= maxPhotos) {
+                btnCapture.textContent = "Selesai! ✔️";
+                btnCapture.disabled = true;
+                btnPrint.disabled = false;
+            } else {
+                btnCapture.textContent = `Ambil Foto 📸 (${currentPhotos + 1}/${maxPhotos})`;
+                btnCapture.disabled = false;
+                btnPrint.disabled = true;
+            }
+
+            // Update Retake Button
+            btnRetake.disabled = currentPhotos === 0;
+        }
+
+        // Fitur Cetak Foto
+        btnPrint.addEventListener('click', () => {
+            const originalText = btnPrint.textContent;
+            btnPrint.textContent = "Memproses...";
+            btnPrint.disabled = true;
+            btnCapture.disabled = true;
+            btnRetake.disabled = true;
+
+            // Reset transformasi khusus saat proses foto agar resolusinya tetap HD 800px
+            const originalTransform = newspaperExport.style.transform;
+            const originalHeight = exportContainer.style.height;
+            newspaperExport.style.transform = 'scale(1)';
+            exportContainer.style.height = 'auto';
+
+            html2canvas(newspaperExport, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: "#f4efd3",
+            }).then(canvas => {
+                // Kembalikan ukuran untuk layar HP setelah beres difoto
+                newspaperExport.style.transform = originalTransform;
+                exportContainer.style.height = originalHeight;
+
+                const link = document.createElement('a');
+                link.download = `The-Vintage-Times-${Date.now()}.jpg`;
+                link.href = canvas.toDataURL('image/jpeg', 0.9);
+                link.click();
+                
+                btnPrint.textContent = originalText;
+                btnPrint.disabled = false;
+                updateUI(); // Mengaktifkan retake lagi
+            }).catch(err => {
+                console.error("Gagal mencetak:", err);
+                btnPrint.textContent = "Gagal Cetak!";
+                newspaperExport.style.transform = originalTransform;
+                exportContainer.style.height = originalHeight;
+                updateUI();
+            });
+        });
+    </script>
+</body>
+</html>
